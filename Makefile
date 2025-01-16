@@ -1,11 +1,12 @@
 
 
 CXX = g++
-CXXFLAGS = -Wall -g
+CXXFLAGS = -Wall -g -Iinclude
 
 TARGET = hprof_parser
 
-OBJS = ./src/main.o
+OBJS =  ./src/main.o \
+		./include/cxxtopt.o
 
 all: $(TARGET)
 
