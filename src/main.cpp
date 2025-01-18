@@ -1,6 +1,10 @@
+// Copyright (c) 2025 Lei Lu. All rights reserved.
+
 #include <iostream>
+#include <utility>
 
 #include "cxxopts.hpp"
+#include "hprof.h"
 
 using std::cout;
 using std::endl;
@@ -14,7 +18,8 @@ using cxxopts::exceptions::exception;
 int
 main(int argc, char *argv[])
 {
-    Options options(argv[0], " - Hprof parser program");
+    Parameter para;
+    Options options("hprof_parser", " - Hprof parser program");
     options.add_options()
         ("d,debug", "Enable debugging") // a bool parameter
         ("s,dump-stack-trace", "Dump thread stack trace") // a bool parameter
@@ -39,12 +44,18 @@ main(int argc, char *argv[])
     }
 
     if (result.count("s")) {
-        cout << "Dump thread stack trace." << endl;
+        para.setDumpStackTrace();
     }
 
-    if (result.count("file")) {
-        cout << "Hprof file." << endl;
+    // Must have 'file' input from command line.
+    if (!result.count("file")) {
+        cout << "Missing 'file' input"  << endl;
+        cout << options.help() << endl;
+        exit(0);
     }
+    para.setFilePath(result["file"].as<string>());
+
+    Hprof hprof(std::move(para));
 
     return 0;
 }
