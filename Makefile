@@ -3,7 +3,8 @@ CXXFLAGS = -Wall -g -Iinclude -std=c++14 -stdlib=libc++
 
 TARGET = hprof_parser
 
-OBJS =  ./src/main.o
+OBJS =  ./src/main.o \
+        ./src/hprof.o
 
 all: $(TARGET)
 
