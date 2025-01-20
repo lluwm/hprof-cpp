@@ -58,6 +58,7 @@ main(int argc, char *argv[])
 
     // para is not valid after this point.
     Hprof hprof(std::move(para));
+    hprof.parse();
 
     return 0;
 }

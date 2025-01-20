@@ -71,3 +71,11 @@ MemoryMappedFileBuffer::init()
     _fd = -1;
     _shards = -1;
 }
+
+unsigned char
+MemoryMappedFileBuffer::readByte()
+{
+    unsigned char result = _byteBuffers[getIndex()][getOffset()];
+    _currentPosition++;
+    return result;
+}

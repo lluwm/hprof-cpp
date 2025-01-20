@@ -22,8 +22,8 @@ public:
           _buffer(_para.getFilePath())
     {}
 
+    void parse();
 private:
-
     // parsing related operations.
     string readNullTerminatedString();
 

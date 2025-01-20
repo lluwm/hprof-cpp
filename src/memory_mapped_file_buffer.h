@@ -21,11 +21,21 @@ public:
 
     ~MemoryMappedFileBuffer();
 
+    unsigned char readByte();
+
 
 private:
     MemoryMappedFileBuffer(const std::string& file, int bufferSize, int padding);
     bool isValid() const { return _fd != -1; }
     void init();
+
+    int getIndex() const {
+        return (int) (_currentPosition / _bufferSize);
+    }
+
+    int getOffset() const {
+        return (int) (_currentPosition % _bufferSize);
+    }
 
 private:
     int             _bufferSize;
