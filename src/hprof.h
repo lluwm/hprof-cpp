@@ -4,48 +4,30 @@
 
 #include <utility>
 
+#include "memory_mapped_file_buffer.h"
 #include "para.h"
 
 class Hprof {
 public:
     explicit Hprof()
-        : _fd(-1),
-          _fSize(-1),
-          _data(nullptr)
     {}
 
     explicit Hprof(const Parameter& para)
         : _para(para),
-          _fd(-1),
-          _fSize(-1),
-          _data(nullptr)
+          _buffer(_para.getFilePath())
     {}
 
     explicit Hprof(Parameter&& para)
         : _para(std::move(para)),
-          _fd(-1),
-          _fSize(-1),
-          _data(nullptr)
+          _buffer(_para.getFilePath())
     {}
 
-    // mmap file operations.
-    void mmapOpen(const string& path);
+private:
 
-    void mmapClose();
-
-    bool isMmapOpen() const {
-        return _fd == -1;
-    }
-
-    void initMmapMembers() {
-        _fd = -1;
-        _fSize = -1;
-        _data = nullptr;
-    }
+    // parsing related operations.
+    string readNullTerminatedString();
 
 private:
-    Parameter   _para;
-    int         _fd;
-    long        _fSize;
-    char       *_data;
+    Parameter               _para;
+    MemoryMappedFileBuffer  _buffer;
 };

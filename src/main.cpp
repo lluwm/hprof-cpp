@@ -53,8 +53,10 @@ main(int argc, char *argv[])
         cout << options.help() << endl;
         exit(0);
     }
+
     para.setFilePath(result["file"].as<string>());
 
+    // para is not valid after this point.
     Hprof hprof(std::move(para));
 
     return 0;
