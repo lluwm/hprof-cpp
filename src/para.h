@@ -4,11 +4,10 @@
 
 #include <string>
 
-using std::string;
 
 class Parameter {
 public:
-    explicit Parameter(const string& path, bool dumpStackTrace) {
+    explicit Parameter(const std::string& path, bool dumpStackTrace) {
         _filePath = path;
         _dumpStackTrace = dumpStackTrace;
     }
@@ -19,11 +18,11 @@ public:
         return _dumpStackTrace;
     }
 
-    string getFilePath() const {
+    std::string getFilePath() const {
         return _filePath;
     }
 
-    void setFilePath(const string& path) {
+    void setFilePath(const std::string& path) {
         _filePath = path;
     }
 
@@ -31,6 +30,6 @@ public:
         _dumpStackTrace = true;
     }
 private:
-    string  _filePath;
+    std::string  _filePath;
     bool    _dumpStackTrace;
 };
