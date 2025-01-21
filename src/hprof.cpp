@@ -1,6 +1,7 @@
 // Copyright (c) 2025 Lei Lu. All rights reserved.
 
 #include "hprof.h"
+#include "stackFrame.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -36,6 +37,14 @@ Hprof::parse()
         case kStringInUtf8:
             loadString(recordLen - _idSizeInBytes);
             /* code */
+            break;
+        case kLoadClass:
+            loadClass();
+            break;
+        case kStackFrame:
+            loadStackFrame();
+            break;
+        case kStackTrace:
             break;
         default:
             break;
@@ -76,4 +85,31 @@ Hprof::readUTF8(int length)
     string str (temp, length);
     delete []temp;
     return str;
+}
+
+void
+Hprof::loadClass() {
+    unsigned int serial = _buffer.readUInt();
+    unsigned long classId = readId();
+    _buffer.readUInt(); // Ignored: Stack trace serial number.
+
+    string className = _strings[readId()];
+    _classNamesById[classId] = className;
+    _classNamesBySerial[serial] =  className;
+}
+
+void
+Hprof::loadStackFrame()
+{
+    unsigned long stackFrameId = readId();
+    string methodName = _strings[readId()];
+    string methodSig = _strings[readId()];
+    string sourceFile = _strings[readId()];
+
+    unsigned int serial = _buffer.readUInt();
+    int lineNumber = _buffer.readUInt();
+
+    string className = _classNamesBySerial[serial];
+    StackFrame *stackFrame = new StackFrame(stackFrameId, methodName, methodSig, sourceFile, serial, lineNumber);
+    cout << *stackFrame;
 }

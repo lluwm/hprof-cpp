@@ -45,10 +45,14 @@ private:
     void loadString(int length);
     unsigned long readId();
     std::string readUTF8(int length);
+    void loadClass();
+    void loadStackFrame();
 
 private:
     Parameter                                       _para;
     MemoryMappedFileBuffer                          _buffer;
     unsigned int                                    _idSizeInBytes;
     std::unordered_map<unsigned long, std::string>  _strings;
+    std::unordered_map<unsigned long, std::string>  _classNamesById;
+    std::unordered_map<unsigned int, std::string>   _classNamesBySerial;
 };
