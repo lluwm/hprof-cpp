@@ -34,15 +34,18 @@ public:
         case kUnkownLocation:
             return "Unknown line number";
         case kCcompiledMethod:
-            return "Compiled method";
+            return "Compiled Method";
         case kNativeMethod:
-            return "Native method";
+            return "Native Method";
         default:
             return std::to_string(_lineNumber);
         }
     }
 
-
+    friend std::ostream& operator <<(std::ostream& os, const StackFrame& stack) {
+        os << stack.getMethodName() << stack.getSignature() << " - " << stack.getFileName() << ":" << stack.lineNumberString();
+        return os;
+    }
 
 private:
     unsigned long   _id;
@@ -53,8 +56,3 @@ private:
     int             _lineNumber;
 };
 
-std::ostream& operator <<(std::ostream& os, const StackFrame& stack)
-{
-    os << stack.getMethodName() << stack.getSignature() << " - " << stack.getFileName() << ":" << stack.lineNumberString();
-    return os;
-} 

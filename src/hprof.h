@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "memory_mapped_file_buffer.h"
+#include "stackframe.h"
 #include "para.h"
 
 class Hprof {
@@ -24,6 +25,21 @@ public:
     static const int kHeapDumpEnd       = 0x2c;
     static const int kCpuSamples        = 0x0d;
     static const int kControlSettings   = 0x0e;
+
+    // subtag in HEAP DUMP.
+    static const int kRootUnknown           = 0xff;
+    static const int kRootJniGlobal         = 0x01;
+    static const int kRootJniLocal          = 0x02;
+    static const int kRootJavaFrame         = 0x03;
+    static const int kRootNativeStack       = 0x04;
+    static const int kRootStickyClass       = 0x05;
+    static const int kRootThreadBlock       = 0x06;
+    static const int kRootMonitorUsed       = 0x07;
+    static const int kRootThreadObject      = 0x08;
+    static const int kClassDump             = 0x20;
+    static const int kInstanceDump          = 0x21;
+    static const int kObjectArrayDump       = 0x22;
+    static const int kPrimitiveArrayDump    = 0x23;
 
     explicit Hprof()
     {}
@@ -47,6 +63,8 @@ private:
     std::string readUTF8(int length);
     void loadClass();
     void loadStackFrame();
+    void loadStackTrace();
+    void loadHeapDump(long length);
 
 private:
     Parameter                                       _para;
@@ -55,4 +73,5 @@ private:
     std::unordered_map<unsigned long, std::string>  _strings;
     std::unordered_map<unsigned long, std::string>  _classNamesById;
     std::unordered_map<unsigned int, std::string>   _classNamesBySerial;
+    std::unordered_map<unsigned long, StackFrame *> _stackFrameById;
 };

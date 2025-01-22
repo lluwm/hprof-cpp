@@ -1,7 +1,8 @@
 // Copyright (c) 2025 Lei Lu. All rights reserved.
 
 #include "hprof.h"
-#include "stackFrame.h"
+#include "stackframe.h"
+#include "stacktrace.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -45,8 +46,14 @@ Hprof::parse()
             loadStackFrame();
             break;
         case kStackTrace:
+            loadStackTrace();
+            break;
+        case kHeapDump:
+        case kHeapDumpSegment:
+            loadHeapDump(recordLen);
             break;
         default:
+            cout << "unkown: " << std::hex<< tag << endl;
             break;
         }
     }
@@ -106,10 +113,40 @@ Hprof::loadStackFrame()
     string methodSig = _strings[readId()];
     string sourceFile = _strings[readId()];
 
-    unsigned int serial = _buffer.readUInt();
+    unsigned int classSerial = _buffer.readUInt();
     int lineNumber = _buffer.readUInt();
 
-    string className = _classNamesBySerial[serial];
-    StackFrame *stackFrame = new StackFrame(stackFrameId, methodName, methodSig, sourceFile, serial, lineNumber);
-    cout << *stackFrame;
+    string className = _classNamesBySerial[classSerial];
+    StackFrame *stackFrame = new StackFrame(stackFrameId, methodName, methodSig, sourceFile, classSerial, lineNumber);
+    _stackFrameById[stackFrameId] = stackFrame;
+}
+
+void
+Hprof::loadStackTrace()
+{
+    unsigned int serialNumber = _buffer.readUInt();
+    unsigned int threadSerialNumber = _buffer.readUInt();
+    unsigned int numFrames = _buffer.readUInt();
+    
+    StackFrame **frames = new StackFrame*[numFrames];
+    for (int i = 0; i < numFrames; i++) {
+        frames[i] = _stackFrameById[readId()];
+    }
+    StackTrace *trace = new StackTrace(serialNumber, threadSerialNumber, frames);
+}
+
+void
+Hprof::loadHeapDump(long len)
+{
+    while (len > 0) {
+        int tag = _buffer.readByte();
+        len--;
+
+        switch(tag) {
+        case kRootUnknown:
+            break;
+        default:
+
+        }
+    }
 }
