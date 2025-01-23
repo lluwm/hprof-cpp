@@ -12,6 +12,14 @@ public:
           _frames(frames)
     {}
 
+    unsigned int getSerialNumber() const {
+        return _serialNumber;
+    }
+
+    unsigned int getThreadSerialNumber() const {
+        return _threadSerialNumber;
+    }
+
 private:
     unsigned int    _serialNumber;
     unsigned int    _threadSerialNumber;

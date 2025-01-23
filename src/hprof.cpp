@@ -118,7 +118,7 @@ Hprof::loadStackFrame()
 
     string className = _classNamesBySerial[classSerial];
     StackFrame *stackFrame = new StackFrame(stackFrameId, methodName, methodSig, sourceFile, classSerial, lineNumber);
-    _stackFrameById[stackFrameId] = stackFrame;
+    _snapshot.addStackFrame(stackFrame);
 }
 
 void
@@ -130,9 +130,10 @@ Hprof::loadStackTrace()
     
     StackFrame **frames = new StackFrame*[numFrames];
     for (int i = 0; i < numFrames; i++) {
-        frames[i] = _stackFrameById[readId()];
+        frames[i] = _snapshot.getStackFrame(readId());
     }
     StackTrace *trace = new StackTrace(serialNumber, threadSerialNumber, frames);
+    _snapshot.addStackTrace(trace);
 }
 
 void
@@ -144,9 +145,33 @@ Hprof::loadHeapDump(long len)
 
         switch(tag) {
         case kRootUnknown:
+            len -= loadBadicObj();
+            break;
+        case kRootJniGlobal:
+            len -= loadBadicObj();
+            readId(); // ignored.
+            len -= _idSizeInBytes;
+            break;
+        case kRootJniLocal:
+            len -= 4;
             break;
         default:
-
+            return;
         }
     }
+}
+
+int
+Hprof::loadBadicObj()
+{
+    unsigned long id = readId();
+    return _idSizeInBytes;
+}
+
+int
+Hprof::loadJniLocal()
+{
+    unsigned long id = readId();
+    int threadSerialNumber = _buffer.readUInt();
+    int stackFrameNumber = _buffer.readUInt();
 }

@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "memory_mapped_file_buffer.h"
+#include "snapshot.h"
 #include "stackframe.h"
 #include "para.h"
 
@@ -65,6 +66,8 @@ private:
     void loadStackFrame();
     void loadStackTrace();
     void loadHeapDump(long length);
+    int loadBadicObj();
+    int loadJniLocal();
 
 private:
     Parameter                                       _para;
@@ -73,5 +76,5 @@ private:
     std::unordered_map<unsigned long, std::string>  _strings;
     std::unordered_map<unsigned long, std::string>  _classNamesById;
     std::unordered_map<unsigned int, std::string>   _classNamesBySerial;
-    std::unordered_map<unsigned long, StackFrame *> _stackFrameById;
+    Snapshot                                        _snapshot;
 };
