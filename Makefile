@@ -5,6 +5,7 @@ TARGET = hprof_parser
 
 OBJS =  ./src/main.o \
         ./src/hprof.o \
+		./src/snapshot.o \
         ./src/memory_mapped_file_buffer.o
 
 all: $(TARGET)
