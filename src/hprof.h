@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "memory_mapped_file_buffer.h"
+#include "rootobj.h"
 #include "snapshot.h"
 #include "stackframe.h"
 #include "para.h"
@@ -66,8 +67,13 @@ private:
     void loadStackFrame();
     void loadStackTrace();
     void loadHeapDump(long length);
-    int loadBadicObj();
+    int loadBasicObj(RootType type);
     int loadJniLocal();
+    int loadJavaFrame();
+    int loadNativeStack();
+    int loadThreadBlock();
+    int loadThreadObject();
+    int loadClassDump();
 
 private:
     Parameter                                       _para;

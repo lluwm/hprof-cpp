@@ -1,17 +1,24 @@
 // Copyright (c) 2025 Lei Lu. All rights reserved.
 
 #include "hprof.h"
+#include "rootobj.h"
 #include "stackframe.h"
 #include "stacktrace.h"
 
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
+#include <vector>
 
 using std::cout;
 using std::endl;
+using std::make_shared;
 using std::runtime_error;
+using std::shared_ptr;
 using std::string;
+using std::vector;
 
 string
 Hprof::readNullTerminatedString()
@@ -117,8 +124,7 @@ Hprof::loadStackFrame()
     int lineNumber = _buffer.readUInt();
 
     string className = _classNamesBySerial[classSerial];
-    StackFrame *stackFrame = new StackFrame(stackFrameId, methodName, methodSig, sourceFile, classSerial, lineNumber);
-    _snapshot.addStackFrame(stackFrame);
+    _snapshot.addStackFrame(make_shared<StackFrame>(stackFrameId, methodName, methodSig, sourceFile, classSerial, lineNumber));
 }
 
 void
@@ -128,12 +134,11 @@ Hprof::loadStackTrace()
     unsigned int threadSerialNumber = _buffer.readUInt();
     unsigned int numFrames = _buffer.readUInt();
     
-    StackFrame **frames = new StackFrame*[numFrames];
+    vector<shared_ptr<StackFrame>> frames(numFrames);
     for (int i = 0; i < numFrames; i++) {
-        frames[i] = _snapshot.getStackFrame(readId());
+        frames.push_back(_snapshot.getStackFrame(readId()));
     }
-    StackTrace *trace = new StackTrace(serialNumber, threadSerialNumber, frames);
-    _snapshot.addStackTrace(trace);
+    _snapshot.addStackTrace(make_shared<StackTrace>(serialNumber, threadSerialNumber, std::move(frames)));
 }
 
 void
@@ -145,15 +150,36 @@ Hprof::loadHeapDump(long len)
 
         switch(tag) {
         case kRootUnknown:
-            len -= loadBadicObj();
+            len -= loadBasicObj(RootType::kUnknown);
             break;
         case kRootJniGlobal:
-            len -= loadBadicObj();
+            len -= loadBasicObj(RootType::kNativeStatic);
             readId(); // ignored.
             len -= _idSizeInBytes;
             break;
         case kRootJniLocal:
-            len -= 4;
+            len -= loadJniLocal();
+            break;
+        case kRootJavaFrame:
+            len -= loadJavaFrame();
+            break;
+        case kRootNativeStack:
+            len -= loadNativeStack();
+            break;
+        case kRootStickyClass:
+            len -= loadBasicObj(RootType::kSystemClass);
+            break;
+        case kRootThreadBlock:
+            len -= loadThreadBlock();
+            break;
+        case kRootMonitorUsed:
+            len -= loadBasicObj(RootType::kBusyMonitor);
+            break;
+        case kRootThreadObject:
+            len -= loadThreadObject();
+            break;
+        case kClassDump:
+            len -= loadClassDump();
             break;
         default:
             return;
@@ -162,16 +188,146 @@ Hprof::loadHeapDump(long len)
 }
 
 int
-Hprof::loadBadicObj()
+Hprof::loadBasicObj(RootType type)
 {
     unsigned long id = readId();
+    _snapshot.addRoot(make_shared<RootObj>(type, id));
     return _idSizeInBytes;
 }
+
+
+/*
+ * ROOT JNI LOCAL:
+ *
+ * ID - object ID
+ * u4 - thread serial number
+ * u4 - frame number in stack trace (-1 for empty)
+ */
 
 int
 Hprof::loadJniLocal()
 {
     unsigned long id = readId();
-    int threadSerialNumber = _buffer.readUInt();
-    int stackFrameNumber = _buffer.readUInt();
+    unsigned int threadSerialNum = _buffer.readUInt();
+    unsigned int stackFrameNum = _buffer.readUInt();
+    shared_ptr<Thread> thread = _snapshot.getThread(threadSerialNum);
+    shared_ptr<StackTrace> trace = _snapshot.getStackTraceAtDepth(threadSerialNum, stackFrameNum);
+    _snapshot.addRoot(make_shared<RootObj>(RootType::kNativeLocal, id, threadSerialNum, trace));
+    return _idSizeInBytes + 4 * 2;
+}
+
+
+/*
+ * ROOT JAVA FRAME:
+ *
+ * ID - object ID
+ * u4 - thread serial number
+ * u4 - frame number in stack trace (-1 for empty)
+ */
+
+int
+Hprof::loadJavaFrame()
+{
+    unsigned long id = readId();
+    unsigned int threadSerialNum = _buffer.readUInt();
+    unsigned int stackFrameNum = _buffer.readUInt();
+    shared_ptr<Thread> thread = _snapshot.getThread(threadSerialNum);
+    shared_ptr<StackTrace> trace = _snapshot.getStackTraceAtDepth(threadSerialNum, stackFrameNum);
+    _snapshot.addRoot(make_shared<RootObj>(RootType::kJavaLocal, id, threadSerialNum, trace));
+    return _idSizeInBytes + 4 * 2;
+}
+
+
+/*
+ * ROOT NATIVE STACK:
+ *
+ * ID - object ID
+ * u4 - thread serial number
+ */
+
+int
+Hprof::loadNativeStack()
+{
+    unsigned long id = readId();
+    unsigned int threadSerialNum = _buffer.readUInt();
+    shared_ptr<Thread> thread = _snapshot.getThread(threadSerialNum);
+    shared_ptr<StackTrace> trace = _snapshot.getStackTrace(thread->getStackSerialNum());
+    _snapshot.addRoot(make_shared<RootObj>(RootType::kNativeStack, id, threadSerialNum, trace));
+    return _idSizeInBytes + 4;
+}
+
+
+/*
+ * ROOT THREAD BLOCK:
+ *
+ * ID - object ID
+ * u4 - thread serial number
+ */
+
+int
+Hprof::loadThreadBlock()
+{
+    unsigned long id = readId();
+    unsigned int threadSerialNum = _buffer.readUInt();
+    shared_ptr<Thread> thread = _snapshot.getThread(threadSerialNum);
+    shared_ptr<StackTrace> trace = _snapshot.getStackTrace(thread->getStackSerialNum());
+    _snapshot.addRoot(make_shared<RootObj>(RootType::kThreadBlock, id, threadSerialNum, trace));
+    return _idSizeInBytes + 4;
+}
+
+
+/*
+ * ROOT THREAD OBJECT:
+ *
+ * ID - thread object ID
+ * u4 - thread serial number
+ * u4 - stack trace serial number
+ */
+
+int
+Hprof::loadThreadObject()
+{
+    unsigned long id = readId();
+    unsigned int threadSerialNumber = _buffer.readUInt();
+    unsigned int stackSerialNumber = _buffer.readUInt();
+
+    shared_ptr<Thread> thread = make_shared<Thread>(id, stackSerialNumber);
+    shared_ptr<StackTrace> stack = _snapshot.getStackTrace(stackSerialNumber);
+
+    _snapshot.addRoot(make_shared<RootObj>(RootType::kThreadObject, id, threadSerialNumber, stack));
+    _snapshot.addThread(threadSerialNumber, thread);
+    return _idSizeInBytes + 4 * 2;
+}
+
+
+/*
+ * CLASS DUMP:
+ *
+ * ID - class object ID
+ * u4 - stack trace serial number
+ * ID - super class object ID
+ * ID - class loader object ID
+ * ID - signers object ID
+ * ID - protection domain object ID
+ * ID - reserved
+ * ID - reserved
+ * u4 - instance size (in bytes)
+ */
+
+int
+Hprof::loadClassDump()
+{
+    unsigned long id = readId();
+    unsigned int stackSerialNumber = _buffer.readUInt();
+    shared_ptr<StackTrace> stack = _snapshot.getStackTrace(stackSerialNumber);
+
+    unsigned long superClassId = readId();
+    unsigned long classLoaderId = readId();
+
+    readId(); // Ignored: Signeres ID.
+    readId(); // Ignored: Protection domain ID.
+    readId(); // RESERVED.
+    readId(); // RESERVED.
+
+    unsigned int instanceSize = _buffer.readUInt();
 }
