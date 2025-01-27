@@ -64,6 +64,14 @@ public:
         return _length - _currentPosition;
     }
 
+    void setCurrentPosition(long val) {
+        _currentPosition = val;
+    }
+
+    long getCurrentPosition() const {
+        return _currentPosition;
+    }
+
 private:
     MemoryMappedFileBuffer(const std::string& file, int bufferSize, int padding);
     void init();

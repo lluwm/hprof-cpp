@@ -2,10 +2,12 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 
+#include "classobj.h"
 #include "rootobj.h"
 #include "stackframe.h"
 #include "stacktrace.h"
@@ -37,9 +39,16 @@ public:
 
     std::shared_ptr<StackTrace> getStackTraceAtDepth(int traceSerialNumber, int depth) const;
 
+    void addClass(unsigned long id, const std::shared_ptr<ClassObj>& theClass) {
+        _classesById[id] = theClass;
+        _classesByName.insert({theClass->getClassName(), theClass});
+    }
+
 private:
     std::unordered_map<unsigned long, std::shared_ptr<StackFrame>>  _frames;
     std::unordered_map<unsigned int, std::shared_ptr<StackTrace>>   _traces;
     std::unordered_map<unsigned int, std::shared_ptr<Thread>>       _threads; // Serial number to Thread *.
     std::vector<std::shared_ptr<RootObj>>                           _roots;
+    std::unordered_map<unsigned long, std::shared_ptr<ClassObj>>    _classesById;
+    std::multimap<std::string, std::shared_ptr<ClassObj>>           _classesByName;
 };

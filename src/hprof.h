@@ -9,6 +9,7 @@
 #include "rootobj.h"
 #include "snapshot.h"
 #include "stackframe.h"
+#include "type.h"
 #include "para.h"
 
 class Hprof {
@@ -74,6 +75,9 @@ private:
     int loadThreadBlock();
     int loadThreadObject();
     int loadClassDump();
+    int skipValue();
+    void skipFully(long numBytes);
+    int getTypeSize(Type type);
 
 private:
     Parameter                                       _para;

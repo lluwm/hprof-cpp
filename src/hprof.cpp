@@ -1,5 +1,7 @@
 // Copyright (c) 2025 Lei Lu. All rights reserved.
 
+#include "classobj.h"
+#include "field.h"
 #include "hprof.h"
 #include "rootobj.h"
 #include "stackframe.h"
@@ -330,4 +332,94 @@ Hprof::loadClassDump()
     readId(); // RESERVED.
 
     unsigned int instanceSize = _buffer.readUInt();
+
+    int bytesRead = _idSizeInBytes * 7 + 4 * 2;
+
+    //  Skip over the constant pool.
+    unsigned short numEntries = _buffer.readUshort();
+    bytesRead += 2;
+
+    for (unsigned short i = 0; i < numEntries; i++) {
+        _buffer.readUshort();
+        bytesRead += 2 + skipValue();
+    }
+
+    string className = _classNamesById[id];
+    shared_ptr<ClassObj> theClass = make_shared<ClassObj>(id, stack, className, _buffer.getCurrentPosition());
+    theClass->setSuperClassId(superClassId);
+
+    //  Skip over static fields.
+    numEntries = _buffer.readUshort();
+    bytesRead += 2;
+
+    vector<shared_ptr<Field>> staticFields(numEntries);
+
+    for (unsigned short i = 0; i < numEntries; i++) {
+        string name = _strings[readId()];
+        Type type = static_cast<Type>(_buffer.readByte());
+        staticFields.push_back(make_shared<Field>(type, name));
+        skipFully(getTypeSize(type));
+        bytesRead += _idSizeInBytes + 1 +getTypeSize(type);
+    }
+    theClass->setStaticFields(std::move(staticFields));
+
+    //  Instance fields
+    numEntries = _buffer.readUshort();
+    bytesRead += 2;
+
+    vector<shared_ptr<Field>> fields(numEntries);
+    for (unsigned short i = 0; i < numEntries; i++) {
+        string name = _strings[readId()];
+        Type type = static_cast<Type>(_buffer.readByte());
+        staticFields.push_back(make_shared<Field>(type, name));
+        bytesRead += _idSizeInBytes + 1;
+    }
+
+    theClass->setFields(fields);
+    theClass->setInstanceSize(instanceSize);
+
+    _snapshot.addClass(id, theClass);
+    return bytesRead;
+}
+
+
+int
+Hprof::skipValue() {
+    int type = _buffer.readByte();
+    int size = getTypeSize(static_cast<Type>(type));
+    skipFully(size);
+    return size + 1;
+}
+
+
+int
+Hprof::getTypeSize(Type type) 
+{
+    switch (type)
+    {
+    case Type::kObject:
+        return 0; 
+    case Type::kBoolean:
+        return 1;
+    case Type::kChar:
+        return 2;
+    case Type::kFloat:
+        return 4;
+    case Type::kDouble:
+        return 8;
+    case Type::kByte:
+        return 1;
+    case Type::kShort:
+        return 2;
+    case Type::kInt:
+        return 4;
+    case Type::kLong:
+        return 8;
+    }
+}
+
+
+void
+Hprof::skipFully(long numBytes) {
+    _buffer.setCurrentPosition(_buffer.getCurrentPosition() + numBytes);
 }
