@@ -61,6 +61,13 @@ public:
         return result;
     }
 
+    friend std::ostream& operator <<(std::ostream& os, const StackTrace& trace) {
+        for (const std::shared_ptr<StackFrame>& frame : trace._frames) {
+            os << *frame;
+        }
+        return os;
+    }
+
 private:
     unsigned int                                _serialNumber;
     unsigned int                                _threadSerialNumber;

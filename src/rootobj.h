@@ -4,6 +4,7 @@
 
 #include <memory>
 
+#include "instance.h"
 #include "stacktrace.h"
 
 enum class RootType {
@@ -18,22 +19,19 @@ enum class RootType {
     kThreadObject
 };
 
-class RootObj {
+class RootObj : public Instance {
 public:
     explicit RootObj(RootType type, unsigned long id)
         : RootObj(type, id, 0, nullptr)
     {}
 
     explicit RootObj(RootType type, unsigned long id, unsigned int threadSerialNum, std::shared_ptr<StackTrace> stack)
-        : _id(id),
+        : Instance(id, stack),
           _type(type),
-          _threadSerialNum(threadSerialNum),
-          _stack(stack)
+          _threadSerialNum(threadSerialNum)
     {}
 
 private:
-    unsigned long               _id;
     RootType                    _type;
     unsigned int                _threadSerialNum;
-    std::shared_ptr<StackTrace> _stack;
 };

@@ -1,6 +1,8 @@
 // Copyright (c) 2025 Lei Lu. All rights reserved.
 
+#include "array_instance.h"
 #include "classobj.h"
+#include "class_instance.h"
 #include "field.h"
 #include "hprof.h"
 #include "rootobj.h"
@@ -20,6 +22,7 @@ using std::make_shared;
 using std::runtime_error;
 using std::shared_ptr;
 using std::string;
+using std::to_string;
 using std::vector;
 
 string
@@ -37,6 +40,7 @@ Hprof::parse()
 {
     string version = readNullTerminatedString();
     _idSizeInBytes = _buffer.readUInt();
+    updateObjectTypeSize(_idSizeInBytes);
     _buffer.readULong(); // Timestamp, ignored.
 
     while (_buffer.hasRemaining()) {
@@ -62,6 +66,7 @@ Hprof::parse()
             loadHeapDump(recordLen);
             break;
         default:
+            skipFully(recordLen);
             cout << "unkown: " << std::hex<< tag << endl;
             break;
         }
@@ -183,8 +188,17 @@ Hprof::loadHeapDump(long len)
         case kClassDump:
             len -= loadClassDump();
             break;
+        case kInstanceDump:
+            len -= loadInstanceDump();
+            break;
+        case kObjectArrayDump:
+            len -= loadObjectArrayDump();
+            break;
+        case kPrimitiveArrayDump:
+            len -= loadPrimitiveArrayDump();
+            break;
         default:
-            return;
+            throw runtime_error("unknown tag: " + to_string(tag));
         }
     }
 }
@@ -338,7 +352,6 @@ Hprof::loadClassDump()
     //  Skip over the constant pool.
     unsigned short numEntries = _buffer.readUshort();
     bytesRead += 2;
-
     for (unsigned short i = 0; i < numEntries; i++) {
         _buffer.readUshort();
         bytesRead += 2 + skipValue();
@@ -366,12 +379,11 @@ Hprof::loadClassDump()
     //  Instance fields
     numEntries = _buffer.readUshort();
     bytesRead += 2;
-
     vector<shared_ptr<Field>> fields(numEntries);
     for (unsigned short i = 0; i < numEntries; i++) {
         string name = _strings[readId()];
         Type type = static_cast<Type>(_buffer.readByte());
-        staticFields.push_back(make_shared<Field>(type, name));
+        fields.push_back(make_shared<Field>(type, name));
         bytesRead += _idSizeInBytes + 1;
     }
 
@@ -395,31 +407,78 @@ Hprof::skipValue() {
 int
 Hprof::getTypeSize(Type type) 
 {
-    switch (type)
-    {
-    case Type::kObject:
-        return 0; 
-    case Type::kBoolean:
-        return 1;
-    case Type::kChar:
-        return 2;
-    case Type::kFloat:
-        return 4;
-    case Type::kDouble:
-        return 8;
-    case Type::kByte:
-        return 1;
-    case Type::kShort:
-        return 2;
-    case Type::kInt:
-        return 4;
-    case Type::kLong:
-        return 8;
-    }
+    return kTypeSize[type];
+}
+
+void
+Hprof::updateObjectTypeSize(int size) const
+{
+    kTypeSize[Type::kObject] = size;
 }
 
 
 void
 Hprof::skipFully(long numBytes) {
     _buffer.setCurrentPosition(_buffer.getCurrentPosition() + numBytes);
+}
+
+
+int
+Hprof::loadInstanceDump()
+{
+    unsigned long id = readId();
+    unsigned int stackId = _buffer.readUInt();
+    shared_ptr<StackTrace> stack = _snapshot.getStackTrace(stackId);
+
+    unsigned long classId = readId();
+    unsigned int remaining = _buffer.readUInt();
+    long pos = _buffer.getCurrentPosition();
+
+    shared_ptr<Instance> instance = make_shared<ClassInstance>(id, stack, pos);
+    instance->setClassId(classId);
+    _snapshot.addInstance(id, instance);
+
+    skipFully(remaining);
+    return _idSizeInBytes * 2 + 4 + remaining;
+}
+
+int
+Hprof::loadObjectArrayDump()
+{
+    unsigned long id = readId();
+    unsigned int stackId = _buffer.readUInt();
+    shared_ptr<StackTrace> stack = _snapshot.getStackTrace(stackId);
+
+    unsigned int numElements = _buffer.readUInt();
+    unsigned long classId = readId();
+
+    shared_ptr<Instance> array = make_shared<ArrayInstance>(id, stack, Type::kObject,
+                                                                 numElements, _buffer.getCurrentPosition());
+    array->setClassId(classId);
+    _snapshot.addInstance(id, array);
+    
+    int remaining = numElements * _idSizeInBytes;
+    skipFully(remaining);
+    return _idSizeInBytes + 4 + 4 + _idSizeInBytes + remaining;
+}
+
+
+int
+Hprof::loadPrimitiveArrayDump()
+{
+    unsigned long id = readId();
+    unsigned int stackId = _buffer.readUInt();
+    shared_ptr<StackTrace> stack = _snapshot.getStackTrace(stackId);
+
+    unsigned int numElements = _buffer.readUInt();
+    Type type = static_cast<Type>(_buffer.readByte());
+    int size = getTypeSize(type);
+
+    shared_ptr<Instance> array = make_shared<ArrayInstance>(id, stack, type, numElements, _buffer.getCurrentPosition());
+
+    _snapshot.addInstance(id, array);
+
+    int remaining = numElements * size;
+    skipFully(remaining);
+    return _idSizeInBytes + 4 + 4 + 1 + remaining; 
 }

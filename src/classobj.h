@@ -7,13 +7,13 @@
 #include <utility>
 
 #include "field.h"
+#include "instance.h"
 #include "stacktrace.h"
 
-class ClassObj {
+class ClassObj : public Instance {
 public:
     explicit ClassObj(long id, std::shared_ptr<StackTrace> stack, std::string className, long staticFieldsOffset)
-        : _id(id),
-          _stack(stack),
+        : Instance(id, stack),
           _className(className),
           _staticFieldsOffset(staticFieldsOffset),
           _superClassId(0),
@@ -51,8 +51,6 @@ public:
         return _className;
     }
 private:
-    unsigned long                       _id;
-    std::shared_ptr<StackTrace>         _stack;
     std::string                         _className;
     long                                _staticFieldsOffset;
     unsigned long                       _superClassId;

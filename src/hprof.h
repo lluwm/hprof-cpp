@@ -78,6 +78,10 @@ private:
     int skipValue();
     void skipFully(long numBytes);
     int getTypeSize(Type type);
+    int loadInstanceDump();
+    int loadObjectArrayDump();
+    int loadPrimitiveArrayDump();
+    void updateObjectTypeSize(int size) const;
 
 private:
     Parameter                                       _para;
