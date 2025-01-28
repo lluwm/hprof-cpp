@@ -41,7 +41,7 @@ public:
         return _threadSerialNumber;
     }
 
-    void setParent(const std::shared_ptr<StackTrace>& parent) {
+    void setParent(StackTrace *parent) {
         _parent = parent;
     }
 
@@ -54,8 +54,7 @@ public:
         if (_parent != nullptr) {
             result->setParent(_parent);
         } else {
-            std::shared_ptr<StackTrace> ptr(this);
-            result->setParent(ptr);
+            result->setParent(this);
         }
         result->setOffset(startingDepth + _offset);
         return result;
@@ -79,6 +78,6 @@ private:
      * This alleviates the need to constantly be duplicating subsections of the
      * list of stack frame ids.
      */
-    std::shared_ptr<StackTrace>                 _parent;
+    StackTrace                                  *_parent;
     unsigned int                                _offset;
 };
