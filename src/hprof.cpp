@@ -67,7 +67,6 @@ Hprof::parse()
             break;
         default:
             skipFully(recordLen);
-            cout << "unkown: " << std::hex<< tag << endl;
             break;
         }
     }
@@ -439,7 +438,7 @@ Hprof::loadInstanceDump()
     _snapshot.addInstance(id, instance);
 
     skipFully(remaining);
-    return _idSizeInBytes * 2 + 4 + remaining;
+    return _idSizeInBytes * 2 + 4 * 2 + remaining;
 }
 
 int
@@ -453,7 +452,7 @@ Hprof::loadObjectArrayDump()
     unsigned long classId = readId();
 
     shared_ptr<Instance> array = make_shared<ArrayInstance>(id, stack, Type::kObject,
-                                                                 numElements, _buffer.getCurrentPosition());
+                                                            numElements, _buffer.getCurrentPosition());
     array->setClassId(classId);
     _snapshot.addInstance(id, array);
     
