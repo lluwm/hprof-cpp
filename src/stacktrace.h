@@ -14,7 +14,6 @@ public:
         : _serialNumber(serialNum),
           _threadSerialNumber(threadSerialNum),
           _frames(frames),
-          _parent(nullptr),
           _offset(0)
     {}
 
@@ -22,14 +21,12 @@ public:
         : _serialNumber(serialNum),
           _threadSerialNumber(threadSerialNum),
           _frames(std::move(frames)),
-          _parent(nullptr),
           _offset(0)
     {}
 
     explicit StackTrace()
         : _serialNumber(0),
           _threadSerialNumber(0),
-          _parent(nullptr),
           _offset(0)
     {}
 
@@ -41,7 +38,7 @@ public:
         return _threadSerialNumber;
     }
 
-    void setParent(std::shared_ptr<StackTrace> parent) {
+    void setParent(std::weak_ptr<StackTrace> parent) {
         _parent = parent;
     }
 
@@ -51,7 +48,7 @@ public:
 
     std::shared_ptr<StackTrace> fromDepth(int startingDepth) {
         std::shared_ptr<StackTrace> result = std::make_shared<StackTrace>();
-        if (_parent != nullptr) {
+        if (_parent.expired()) {
             result->setParent(_parent);
         } else {
             result->setParent(shared_from_this());
@@ -78,6 +75,6 @@ private:
      * This alleviates the need to constantly be duplicating subsections of the
      * list of stack frame ids.
      */
-    std::shared_ptr<StackTrace>                 _parent;
+    std::weak_ptr<StackTrace>                   _parent;
     unsigned int                                _offset;
 };
