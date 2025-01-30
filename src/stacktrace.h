@@ -8,7 +8,7 @@
 
 #include "stackframe.h"
 
-class StackTrace {
+class StackTrace : public std::enable_shared_from_this<StackTrace> {
 public:
     explicit StackTrace(long serialNum, int threadSerialNum, const std::vector<std::shared_ptr<StackFrame>>& frames)
         : _serialNumber(serialNum),
@@ -41,7 +41,7 @@ public:
         return _threadSerialNumber;
     }
 
-    void setParent(StackTrace *parent) {
+    void setParent(std::shared_ptr<StackTrace> parent) {
         _parent = parent;
     }
 
@@ -54,7 +54,7 @@ public:
         if (_parent != nullptr) {
             result->setParent(_parent);
         } else {
-            result->setParent(this);
+            result->setParent(shared_from_this());
         }
         result->setOffset(startingDepth + _offset);
         return result;
@@ -78,6 +78,6 @@ private:
      * This alleviates the need to constantly be duplicating subsections of the
      * list of stack frame ids.
      */
-    StackTrace                                  *_parent;
+    std::shared_ptr<StackTrace>                 _parent;
     unsigned int                                _offset;
 };
