@@ -52,6 +52,7 @@ MemoryMappedFileBuffer::~MemoryMappedFileBuffer()
         if (munmap(_shards[i]->getByteBuffers(), _shards[i]->getSize()) == -1) {
             throw runtime_error("munmap failed when closing file");
         }
+        delete _shards[i];
     }
 
     delete[] _shards;
