@@ -60,5 +60,7 @@ main(int argc, char *argv[])
     Hprof hprof(std::move(para));
     hprof.parse();
 
+    hprof.displayThreads();
+
     return 0;
 }

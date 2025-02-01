@@ -1,9 +1,12 @@
 // Copyright (c) 2025 Lei Lu. All rights reserved.
 
+#include <iostream>
 #include <memory>
 
 #include "snapshot.h"
 
+using std::cout;
+using std::endl;
 using std::shared_ptr;
 
 shared_ptr<StackFrame>
@@ -27,6 +30,13 @@ Snapshot::getThread(unsigned int serialNum) const
     return search != _threads.end() ? search->second : nullptr;
 }
 
+std::shared_ptr<Instance>
+Snapshot::getInstance(unsigned long id) const
+{
+    auto search = _instances.find(id);
+    return search != _instances.end() ? search->second : nullptr;
+}
+
 shared_ptr<StackTrace>
 Snapshot::getStackTraceAtDepth(int traceSerialNumber, int depth) const
 {
@@ -35,4 +45,16 @@ Snapshot::getStackTraceAtDepth(int traceSerialNumber, int depth) const
         trace = trace->fromDepth(depth);
     }
     return trace;
+}
+
+
+void
+Snapshot::displayThreads()
+{
+    for (auto& item : _threads) {
+        StackTrace *st = getStackTrace(item.first).get();
+        if (st != nullptr) {
+            cout << *st;
+        }
+    }
 }

@@ -2,8 +2,10 @@
 
 #pragma once
 
-#include <string>
 #include <iostream>
+#include <regex>
+#include <string>
+#include <utility>
 
 class StackFrame {
 public:
@@ -12,20 +14,32 @@ public:
     static const int kCcompiledMethod   = -2;
     static const int kNativeMethod      = -3;
 
-    explicit StackFrame(long id, const std::string& method, const std::string& sig, const std::string& file, int serial, int line)
+    explicit StackFrame(long id, const std::string& method, const std::string& sig, const std::string& file, int line, const std::string& className, int serial)
         : _id(id),
           _methodName(method),
           _signature(sig),
           _fileName(file),
-          _serialNumber(serial),
-          _lineNumber(line)
+          _lineNumber(line),
+          _className(className),
+          _classSerialNumber(serial)
+    {}
+
+    explicit StackFrame(long id, const std::string&& method, std::string&& sig, const std::string&& file, int line, std::string&& className, int serial)
+        : _id(id),
+          _methodName(std::move(method)),
+          _signature(std::move(sig)),
+          _fileName(file),
+          _lineNumber(line),
+          _className(std::move(className)),
+          _classSerialNumber(serial)
     {}
 
     long getId() const { return _id; }
     std::string getMethodName() const { return _methodName; }
     std::string getSignature() const { return _signature; }
     std::string getFileName() const { return _fileName; }
-    int getSerialNumber() const { return _serialNumber; }
+    int getClassSerialNumber() const { return _classSerialNumber; }
+    std::string getClassName() const { return _className; }
 
     std::string lineNumberString() const {
         switch (_lineNumber) {
@@ -43,7 +57,8 @@ public:
     }
 
     friend std::ostream& operator <<(std::ostream& os, const StackFrame& stack) {
-        os << stack.getMethodName() << stack.getSignature() << " - " << stack.getFileName() << ":" << stack.lineNumberString();
+        std::string cName = stack.getClassName();
+        os << "at " << std::regex_replace(cName, std::regex("/"), ".") << "." << stack.getMethodName() << "(" << stack.getFileName() << ":" << stack.lineNumberString() << ")" << std::endl;
         return os;
     }
 
@@ -52,7 +67,8 @@ private:
     std::string     _methodName;
     std::string     _signature;
     std::string     _fileName;
-    int             _serialNumber;
     int             _lineNumber;
+    std::string     _className;
+    int             _classSerialNumber;
 };
 

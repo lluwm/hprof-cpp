@@ -58,8 +58,11 @@ public:
     }
 
     friend std::ostream& operator <<(std::ostream& os, const StackTrace& trace) {
+        os << "TRACE = " << trace.getSerialNumber() << std::endl;
         for (const std::shared_ptr<StackFrame>& frame : trace._frames) {
-            os << *frame;
+            if (frame != nullptr) {
+                os << *frame;
+            }
         }
         return os;
     }

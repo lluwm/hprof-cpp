@@ -58,6 +58,10 @@ public:
     {}
 
     void parse();
+
+    void displayThreads()  {
+        _snapshot.displayThreads(); 
+    }
 private:
     // parsing related operations.
     std::string readNullTerminatedString();

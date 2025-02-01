@@ -62,6 +62,10 @@ public:
         _instances[id] = instance;
     }
 
+    std::shared_ptr<Instance> getInstance(unsigned long id) const;
+
+    void displayThreads();
+
 private:
     std::unordered_map<unsigned long, std::shared_ptr<StackFrame>>  _frames;
     std::unordered_map<unsigned int, std::shared_ptr<StackTrace>>   _traces;

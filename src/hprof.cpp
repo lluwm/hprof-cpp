@@ -65,8 +65,10 @@ Hprof::parse()
         case kHeapDumpSegment:
             loadHeapDump(recordLen);
             break;
+        case kHeapDumpEnd:
+            break;
         default:
-            skipFully(recordLen);
+            throw runtime_error("unhandled tag: " + to_string(tag));
             break;
         }
     }
@@ -130,7 +132,8 @@ Hprof::loadStackFrame()
     int lineNumber = _buffer.readUInt();
 
     string className = _classNamesBySerial[classSerial];
-    _snapshot.addStackFrame(make_shared<StackFrame>(stackFrameId, methodName, methodSig, sourceFile, classSerial, lineNumber));
+    _snapshot.addStackFrame(make_shared<StackFrame>(stackFrameId, std::move(methodName), std::move(methodSig),
+                                                    std::move(sourceFile), lineNumber, std::move(className), classSerial));
 }
 
 void
@@ -282,6 +285,7 @@ Hprof::loadNativeStack()
 int
 Hprof::loadThreadBlock()
 {
+    cout << "here" << endl;
     unsigned long id = readId();
     unsigned int threadSerialNum = _buffer.readUInt();
     shared_ptr<Thread> thread = _snapshot.getThread(threadSerialNum);
